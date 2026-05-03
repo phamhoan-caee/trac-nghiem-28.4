@@ -27,6 +27,8 @@
             border-radius: 50%; border: 2px solid #ddd; overflow: hidden; flex-shrink: 0;
         }
         .ai-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Hiệu ứng sóng âm khi AI đang nói */
         .speaking-waves {
             display: none; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
             gap: 3px; align-items: flex-end; height: 15px;
@@ -166,17 +168,20 @@
         </div>
     </div>
 
+    <!-- KHU VỰC TRỢ LÝ AI -->
     <div id="ai-container">
         <div class="ai-avatar">
-            <img src="https://github.com/phamhoan-caee/trac-nghiem-28.4/blob/main/%E1%BA%A3nh_nh%C3%A2n_vat_de_thi-removebg-preview.png" alt="AI Assistant" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1904/1904560.png'">
+            <!-- Thầy thay đổi link ảnh avatar ở đây nếu cần -->
+            <img src="https://raw.githubusercontent.com/phamhoan-caee/de-thi-AI/main/%E1%BA%A3nh_nh%C3%A2n_vat_de_thi-removebg-preview.png" alt="AI Assistant" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1904/1904560.png'">
             <div class="speaking-waves" id="ai-waves">
                 <div class="wave" style="animation-delay: 0s"></div>
                 <div class="wave" style="animation-delay: 0.1s"></div>
                 <div class="wave" style="animation-delay: 0.2s"></div>
+                <div class="wave" style="animation-delay: 0.3s"></div>
             </div>
         </div>
         <div>
-            <div style="font-weight: bold; color: var(--caee-blue); font-size: 15px;">Trợ lý thi AI</div>
+            <div style="font-weight: bold; color: var(--caee-blue); font-size: 15px;">Trợ lý ảo CAEE</div>
             <div id="ai-status" style="font-size: 13px; color: #666;">Sẵn sàng hỗ trợ học viên...</div>
         </div>
     </div>
@@ -213,18 +218,21 @@
     </div>
 
 <script>
-    const BASE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT4BCGb7JrlQzmhy1-0Bl-qQEVU9OaBabk4xFOZtvMlIVkhDpH7tuMlfdkdZ94ytVfD6cyGT6VDmlP0/pub?output=csv&gid=";
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzprHPlBrnaG7kvakS7GigMaE6rQky4fCxA19-lDFteROr0cN-yjKP6E7mLmc9xHvfnlA/exec";
+    const BASE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQX7gLNKe58sjBUDPDQOohDehuVD22EFgCe472mKd61a6d_FPIYFoh21DEdi9_BS7yukbuwy69Q9oZZ/pub?output=csv&gid=";
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwG-oFBhn_GiGypEp6k2nzX7JMjG0t8Jil2C1cDJjTVoD_GGWVzbzFybh88WcsxlL1o/exec";
     
     let allQuestions = [], selectedQuestions = [], studentAnswers = [];
     let currentQuestionIndex = 0, timeLeft = 1200, timerInterval, isSubmitted = false, cheatCount = 0;
 
     const synth = window.speechSynthesis;
+
+    // HÀM AI NÓI CẢI TIẾN
     function aiSpeak(text) {
+        if (!text) return;
         synth.cancel();
         const utter = new SpeechSynthesisUtterance(text);
         utter.lang = 'vi-VN';
-        utter.rate = 1.1; // Tốc độ vừa phải để học viên nghe rõ
+        utter.rate = 1.05; 
         
         utter.onstart = () => {
             document.getElementById('ai-waves').style.display = 'flex';
@@ -248,10 +256,9 @@
                     question: i.CauHoi, 
                     options: [i.A, i.B, i.C, i.D].filter(o => o),
                     answer: i.DapAnDung ? i.DapAnDung.trim().toUpperCase() : "",
-                    explanation: i.Giaithich || "Thực hiện đúng quy trình an toàn.",
+                    explanation: i.Giaithich || "Thực hiện đúng quy trình an toàn kỹ thuật.",
                     image: i["HINH ANH"] || "" 
                 }));
-                console.log("Đã tải " + allQuestions.length + " câu hỏi.");
             }
         });
     }
@@ -298,7 +305,7 @@
 
         showQuestion(0);
         startTimer();
-        aiSpeak("Chào mừng học viên " + document.getElementById('studentName').value + ". Chúc bạn hoàn thành tốt bài trắc nghiệm.");
+        aiSpeak("Chào mừng học viên " + document.getElementById('studentName').value + ". Mời bạn bắt đầu nội dung trắc nghiệm.");
     }
 
     function showQuestion(idx) {
@@ -331,7 +338,7 @@
         document.getElementById('quiz-content').innerHTML = html;
         renderGrid();
 
-        // CẢI TIẾN: AI đọc cả câu hỏi và đáp án nếu chưa làm
+        // AI TỰ ĐỘNG ĐỌC NỘI DUNG NẾU CHƯA CÓ ĐÁP ÁN (Tránh lặp lại khi đã làm xong)
         if (!stored) {
             let textToRead = "Câu hỏi " + (idx+1) + ": " + q.question + ". ";
             q.options.forEach((opt, i) => {
@@ -362,7 +369,7 @@
                     if(item.innerText.includes(ans)) item.classList.add('shake-anim');
                 });
                 aiSpeak("Chưa đúng. Đáp án đúng là " + q.answer + ". " + q.explanation);
-                setTimeout(() => { showQuestion(qIdx); }, 1500);
+                setTimeout(() => { showQuestion(qIdx); }, 2000);
             }
         } else {
             showQuestion(qIdx);
@@ -419,21 +426,21 @@
         badge.style.backgroundColor = status === "ĐẠT" ? "#28a745" : "#dc3545";
         document.getElementById('result-screen').style.display = 'flex';
 
-        // AI thông báo kết quả
-        aiSpeak("Kết quả của bạn là " + score10 + " điểm. Trạng thái " + status);
+        // AI THÔNG BÁO KẾT QUẢ CUỐI CÙNG
+        aiSpeak("Học viên " + nameValue + " đã hoàn thành bài thi với kết quả " + score10 + " điểm. Trạng thái: " + status);
 
         const formData = new URLSearchParams();
         formData.append('maThi', document.getElementById('maThi').value.trim().toUpperCase());
         formData.append('name', nameValue);
         formData.append('birthDate', dobValue);
         formData.append('khoaThi', khoaThiValue);
-       const rawNghe = document.getElementById('jobType').options[document.getElementById('jobType').selectedIndex].text;
-const modeSuffix = document.getElementById('modeToggle').checked ? " (ÔN TẬP)" : " (THI)";
-formData.append('ngheName', "NGHỀ: " + rawNghe + modeSuffix);
+        const rawNghe = document.getElementById('jobType').options[document.getElementById('jobType').selectedIndex].text;
+        const modeSuffix = document.getElementById('modeToggle').checked ? " (ÔN TẬP)" : " (THI)";
+        formData.append('ngheName', "NGHỀ: " + rawNghe + modeSuffix);
         formData.append('score', score + "/30 (" + score10 + " điểm)");
         formData.append('status', status);
         formData.append('viPham', cheatCount);
-formData.append('mode', document.getElementById('modeToggle').checked ? "ON_TAP" : "THI");
+        formData.append('mode', document.getElementById('modeToggle').checked ? "ON_TAP" : "THI");
         fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: formData });
 
         let c = 15;
