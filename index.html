@@ -27,7 +27,12 @@
             border-radius: 50%; border: 2px solid #ddd; overflow: hidden; flex-shrink: 0;
         }
         .ai-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        
+        /* Thêm vào phần <style> */
+#ai-waves[style*="display: flex"] ~ img {
+    border: 3px solid var(--btn-orange);
+    box-shadow: 0 0 10px var(--btn-orange);
+    transition: all 0.3s;
+}
         /* Hiệu ứng sóng âm khi AI đang nói */
         .speaking-waves {
             display: none; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
@@ -228,22 +233,31 @@
 
     // HÀM AI NÓI CẢI TIẾN
     function aiSpeak(text) {
-        if (!text) return;
-        synth.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.lang = 'vi-VN';
-        utter.rate = 1.05; 
-        
-        utter.onstart = () => {
-            document.getElementById('ai-waves').style.display = 'flex';
-            document.getElementById('ai-status').innerText = 'Đang thuyết minh...';
-        };
-        utter.onend = () => {
-            document.getElementById('ai-waves').style.display = 'none';
-            document.getElementById('ai-status').innerText = 'Sẵn sàng.';
-        };
-        synth.speak(utter);
-    }
+    if (!text) return;
+    synth.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    
+    // Lấy danh sách giọng nói có sẵn trên thiết bị
+    const voices = synth.getVoices();
+    // Tìm giọng tiếng Việt (thường có tên là 'Microsoft An' hoặc 'Google Tiếng Việt')
+    const viVoice = voices.find(v => v.lang === 'vi-VN');
+    if (viVoice) utter.voice = viVoice;
+
+    utter.lang = 'vi-VN';
+    utter.rate = 1.0; // Tốc độ đọc (0.8 chậm, 1.2 nhanh)
+    utter.pitch = 1.0; // Độ cao của giọng
+    
+    // Các sự kiện bắt đầu và kết thúc để hiện hiệu ứng sóng âm
+    utter.onstart = () => {
+        document.getElementById('ai-waves').style.display = 'flex';
+        document.getElementById('ai-status').innerText = 'Đang thuyết minh...';
+    };
+    utter.onend = () => {
+        document.getElementById('ai-waves').style.display = 'none';
+        document.getElementById('ai-status').innerText = 'Sẵn sàng.';
+    };
+    synth.speak(utter);
+}
 
     window.onload = preloadQuestions;
 
