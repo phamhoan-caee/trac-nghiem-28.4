@@ -420,6 +420,27 @@ async function submitQuiz(auto = false) {
         if (cheatCount >= 3) submitQuiz(true); 
     } 
 };
+    // Khi học viên rời khỏi tab (hiện cảnh báo)
+window.onblur = () => { 
+    if(!isSubmitted && selectedQuestions.length > 0) { 
+        cheatCount++; 
+        document.getElementById('warning-overlay').style.display = 'flex'; 
+        document.getElementById('cheat-count-msg').innerText = `Lần vi phạm: ${cheatCount} / 3`; 
+        
+        // Phát âm thanh cảnh báo (nếu thầy muốn)
+        aiSpeak("Vui lòng quay lại màn hình thi ngay lập tức!");
+
+        if (cheatCount >= 3) submitQuiz(true); 
+    } 
+};
+
+// MỚI: Khi học viên quay trở lại tab (ẩn cảnh báo)
+window.onfocus = () => {
+    if(!isSubmitted) {
+        // Ẩn màn hình cảnh báo màu đỏ ngay khi quay lại
+        document.getElementById('warning-overlay').style.display = 'none';
+    }
+};
 </script>
 </body>
 </html>
