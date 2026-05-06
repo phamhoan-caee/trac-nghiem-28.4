@@ -153,10 +153,10 @@
         </div>
     </div>
 
-    <div id="result-screen">
+   <div id="result-screen">
         <div class="result-card">
             <div style="font-size: 1.5rem; font-weight: bold; color: var(--caee-blue); margin-bottom: 20px;">KẾT QUẢ THI</div>
-            <div style="margin-bottom: 20px; font-size: 1.1rem; line-height: 1.6;">
+            <div style="margin-bottom: 20px; font-size: 1.1rem; line-height: 1.6; text-align: center;">
                 Học viên: <b id="res-name" style="color: var(--caee-blue); text-transform: uppercase;">---</b><br>
                 Ngày sinh: <b id="res-dob">---</b><br>
                 Khóa thi: <b id="res-id">---</b>
@@ -165,8 +165,8 @@
                 <span id="res-score">0</span>
                 <small style="font-size: 0.8rem; color: #666; font-weight: normal;">/ 30 câu</small>
             </div>
-            <div id="res-badge" style="display: inline-block; padding: 8px 25px; border-radius: 50px; color: white; font-weight: bold; margin-bottom: 20px;">---</div>
-            <div style="background: #fff3cd; color: #856404; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 0.9rem;">
+            <div id="res-badge" class="status-badge">---</div>
+            <div class="notice-text">
                 KẾT QUẢ NÀY ĐƯỢC NHÀ TRƯỜNG LƯU LẠI VÀ DÙNG ĐỂ XÉT CẤP CHỨNG CHỈ SƠ CẤP NGHỀ.
             </div>
             <p style="margin-top: 25px; color: #666; font-size: 0.85rem;">Hệ thống tự đóng sau <span id="countdown">15</span> giây...</p>
@@ -321,52 +321,71 @@
         }, 1000);
     }
 
-    async function submitQuiz(auto = false) {
-        if(!auto && !confirm("Bạn có chắc muốn nộp bài?")) return;
-        clearInterval(timerInterval); synth.cancel();
+   async function submitQuiz(auto = false) {
+        if(!auto && !confirm("Bạn có chắc chắn muốn nộp bài thi?")) return;
+        clearInterval(timerInterval); 
+        synth.cancel();
         isSubmitted = true;
         
+        const nameValue = document.getElementById('studentName').value.toUpperCase().trim();
+        const dobValue = document.getElementById('studentDOB').value.trim();
+        const khoaThiValue = document.getElementById('khoaThi').value.trim();
+
         let score = 0;
         selectedQuestions.forEach((q, i) => {
             const ans = studentAnswers.find(a => a.qIndex === i);
-            if(ans && ['A','B','C','D'][q.options.indexOf(ans.selected)] === q.answer) score++;
+            const labels = ['A','B','C','D'];
+            if(ans && labels[q.options.indexOf(ans.selected)] === q.answer) score++;
         });
 
+        const score10 = ((score / 30) * 10).toFixed(1); 
         const status = score >= 25 ? "ĐẠT" : "KHÔNG ĐẠT";
-        document.getElementById('res-name').innerText = document.getElementById('studentName').value;
-        document.getElementById('res-dob').innerText = document.getElementById('studentDOB').value;
-        document.getElementById('res-id').innerText = document.getElementById('khoaThi').value;
+
+        document.getElementById('res-name').innerText = nameValue;
+        document.getElementById('res-dob').innerText = dobValue;
+        document.getElementById('res-id').innerText = khoaThiValue;
         document.getElementById('res-score').innerText = score;
+
         const badge = document.getElementById('res-badge');
-        badge.innerText = status;
+        badge.innerText = score10 + " ĐIỂM"; 
         badge.style.backgroundColor = status === "ĐẠT" ? "#28a745" : "#dc3545";
         document.getElementById('result-screen').style.display = 'flex';
 
-        // Gửi dữ liệu (POST)
+        // AI THÔNG BÁO KẾT QUẢ CUỐI CÙNG
+        aiSpeak("Học viên " + nameValue + " đã hoàn thành bài thi với kết quả " + score10 + " điểm. Trạng thái: " + status);
+
         const formData = new URLSearchParams();
-        formData.append('name', document.getElementById('studentName').value);
-        formData.append('score', score + "/30");
+        formData.append('maThi', document.getElementById('maThi').value.trim().toUpperCase());
+        formData.append('name', nameValue);
+        formData.append('birthDate', dobValue);
+        formData.append('khoaThi', khoaThiValue);
+        const rawNghe = document.getElementById('jobType').options[document.getElementById('jobType').selectedIndex].text;
+        const modeSuffix = document.getElementById('modeToggle').checked ? " (ÔN TẬP)" : " (THI)";
+        formData.append('ngheName', "NGHỀ: " + rawNghe + modeSuffix);
+        formData.append('score', score + "/30 (" + score10 + " điểm)");
         formData.append('status', status);
+        formData.append('viPham', cheatCount);
+        formData.append('mode', document.getElementById('modeToggle').checked ? "ON_TAP" : "THI");
         fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: formData });
 
         let c = 15;
-        setInterval(() => { if(c > 0) { c--; document.getElementById('countdown').innerText = c; } else location.reload(); }, 1000);
+        const cdInterval = setInterval(() => { 
+            if(c > 0) { c--; document.getElementById('countdown').innerText = c; }
+            else { clearInterval(cdInterval); location.reload(); }
+        }, 1000);
     }
 
-   // Chỉ kích hoạt chống gian lận khi bài thi đang diễn ra
-window.onblur = () => { 
-    // Điều kiện: Chưa nộp bài VÀ danh sách câu hỏi đã được chọn VÀ màn hình thi đang hiển thị
-    if(!isSubmitted && selectedQuestions.length > 0 && document.getElementById('quiz-screen').style.display === 'grid') { 
-        cheatCount++; 
-        document.getElementById('warning-overlay').style.display = 'flex'; 
-        document.getElementById('cheat-count-msg').innerText = `Vi phạm lần: ${cheatCount}/3`; 
-        if(cheatCount >= 3) submitQuiz(true); 
-    } 
-};
-
-window.onfocus = () => { 
-    if(cheatCount < 3) document.getElementById('warning-overlay').style.display = 'none'; 
-};
+    window.onblur = () => { 
+        if(!isSubmitted && selectedQuestions.length > 0) { 
+            cheatCount++; 
+            document.getElementById('warning-overlay').style.display = 'flex'; 
+            document.getElementById('cheat-count-msg').innerText = `Lần vi phạm: ${cheatCount} / 3`; 
+            if (cheatCount >= 3) submitQuiz(true); 
+        } 
+    };
+    window.onfocus = () => { 
+        if (cheatCount < 3) setTimeout(() => { document.getElementById('warning-overlay').style.display = 'none'; }, 500); 
+    };
 </script>
 </body>
 </html>
