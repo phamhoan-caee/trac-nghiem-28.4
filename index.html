@@ -296,9 +296,13 @@
         
         let score = 0;
         selectedQuestions.forEach((q, i) => {
-            const ans = studentAnswers.find(a => a.qIndex === i);
-            if(ans && ['A','B','C','D'][q.options.indexOf(ans.selected)] === q.answer) score++;
-        });
+    const ansRecord = studentAnswers.find(a => a.qIndex === i);
+    if (ansRecord) {
+        // Tìm xem đáp án đã chọn tương ứng với index nào (0=A, 1=B...)
+        const selectedLetter = ['A', 'B', 'C', 'D'][q.options.indexOf(ansRecord.selected)];
+        if (selectedLetter === q.answer) score++;
+    }
+});
 
         document.getElementById('res-name').innerText = document.getElementById('studentName').value;
         document.getElementById('res-dob').innerText = document.getElementById('studentDOB').value;
@@ -307,7 +311,7 @@
         
         const badge = document.getElementById('res-badge');
         badge.innerText = score >= 25 ? "ĐẠT" : "KHÔNG ĐẠT";
-        badge.style.background = score >= 25 ? var(--success) : var(--danger);
+        badge.style.background = score >= 25 ? "var(--success)" : "var(--danger)";
         
         document.getElementById('result-screen').style.display = 'flex';
         aiSpeak("Học viên đã hoàn thành bài thi. Kết quả của bạn là " + score + " trên 30 câu.");
