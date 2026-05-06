@@ -414,17 +414,20 @@
         }, 1000);
     }
 
-    window.onblur = () => { 
-        if(!isSubmitted && selectedQuestions.length > 0) { 
-            cheatCount++; 
-            document.getElementById('warning-overlay').style.display = 'flex'; 
-            document.getElementById('cheat-count-msg').innerText = `Lần vi phạm: ${cheatCount} / 3`; 
-            if (cheatCount >= 3) submitQuiz(true); 
-        } 
-    };
-    window.onfocus = () => { 
-        if (cheatCount < 3) setTimeout(() => { document.getElementById('warning-overlay').style.display = 'none'; }, 500); 
-    };
+ // Chỉ kích hoạt chống gian lận khi bài thi đang diễn ra
+window.onblur = () => { 
+    // Điều kiện: Chưa nộp bài VÀ danh sách câu hỏi đã được chọn VÀ màn hình thi đang hiển thị
+    if(!isSubmitted && selectedQuestions.length > 0 && document.getElementById('quiz-screen').style.display === 'grid') { 
+        cheatCount++; 
+        document.getElementById('warning-overlay').style.display = 'flex'; 
+        document.getElementById('cheat-count-msg').innerText = `Vi phạm lần: ${cheatCount}/3`; 
+        if(cheatCount >= 3) submitQuiz(true); 
+    } 
+};
+
+window.onfocus = () => { 
+    if(cheatCount < 3) document.getElementById('warning-overlay').style.display = 'none'; 
+};
 </script>
 </body>
 </html>
