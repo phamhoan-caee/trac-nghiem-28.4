@@ -137,10 +137,7 @@
             <div id="ai-info-display" style="font-size: 14px; line-height: 1.4;">
                 <div style="color: var(--caee-blue); font-weight: 800; font-size: 15px;">TRỢ LÝ ẢO CAEE</div>
                <div style="color: #333;">
-                <b> Học viên:</b> <span id="display-name" style="text-transform: uppercase; color: #003399; font-weight: bold;">---</span>
-            </div>
-            <div style="color: #333;">
-                <b> Ngày sinh:</b> <span id="display-dob" style="text-transform: uppercase; color: #003399; font-weight: bold;">---</span>
+                <b>Họ tên học viên:</b> <span id="display-name" style="text-transform: uppercase; color: #003399; font-weight: bold;">---</span>
             </div>
             <div style="color: #333;">
                 <b>Nghề:</b> <span id="display-job" style="color: #d32f2f; font-weight: bold;">---</span>
@@ -182,29 +179,25 @@
     </div>
 
 <script>
-    const BASE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT4BCGb7JrlQzmhy1-0Bl-qQEVU9OaBabk4xFOZtvMlIVkhDpH7tuMlfdkdZ94ytVfD6cyGT6VDmlP0/pub?output=csv&gid=";
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxu9PldlbYqB5b24C8krjHXtb_YQ5eoZPH4KThanZ05uOL1KkpbO4t1ysVWcB8ThjIHAA/exec";
+    const BASE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQX7gLNKe58sjBUDPDQOohDehuVD22EFgCe472mKd61a6d_FPIYFoh21DEdi9_BS7yukbuwy69Q9oZZ/pub?output=csv&gid=";
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwG-oFBhn_GiGypEp6k2nzX7JMjG0t8Jil2C1cDJjTVoD_GGWVzbzFybh88WcsxlL1o/exec";
     
     let allQuestions = [], selectedQuestions = [], studentAnswers = [];
     let currentQuestionIndex = 0, timeLeft = 1200, timerInterval, isSubmitted = false, cheatCount = 0;
-
     const synth = window.speechSynthesis;
 
-    // HÀM AI NÓI CẢI TIẾN
     function aiSpeak(text) {
         if (!text) return;
         synth.cancel();
         const utter = new SpeechSynthesisUtterance(text);
         utter.lang = 'vi-VN';
-        utter.rate = 1.05; 
-        
         utter.onstart = () => {
             document.getElementById('ai-waves').style.display = 'flex';
             document.getElementById('ai-status').innerText = 'Đang thuyết minh...';
         };
         utter.onend = () => {
             document.getElementById('ai-waves').style.display = 'none';
-            document.getElementById('ai-status').innerText = 'Sẵn sàng.';
+            document.getElementById('ai-status').innerText = 'Đang lắng nghe...';
         };
         synth.speak(utter);
     }
@@ -231,46 +224,43 @@
         const maThi = document.getElementById('maThi').value.trim();
         const name = document.getElementById('studentName').value.trim();
         const dob = document.getElementById('studentDOB').value.trim();
-        const rawNghe = document.getElementById('jobType').options[document.getElementById('jobType').selectedIndex].text;
-        const isOnTap = document.getElementById('modeToggle').checked;
-        const ngheFull = "NGHỀ: " + rawNghe + (isOnTap ? " (ÔN TẬP)" : " (THI)");
-
         if(!name || !maThi || !dob) return alert("Vui lòng nhập đầy đủ thông tin!");
         
         const btn = document.getElementById('btnStart');
         btn.disabled = true; btn.innerText = "ĐANG KIỂM TRA...";
 
         try {
-            const res = await fetch(`${WEB_APP_URL}?action=checkCode&code=${encodeURIComponent(maThi)}&name=${encodeURIComponent(name)}&ngheName=${encodeURIComponent(ngheFull)}`);
+            const res = await fetch(`${WEB_APP_URL}?action=checkCode&code=${encodeURIComponent(maThi)}`);
             const result = await res.json();
             if(result.isValid) startQuiz();
-            else { alert(result.message || "Mã thi không đúng!"); btn.disabled = false; btn.innerText = "VÀO THI NGAY ➔"; }
+            else { alert("Mã thi không đúng!"); btn.disabled = false; btn.innerText = "VÀO THI NGAY ➔"; }
         } catch(e) { 
-            alert("Lỗi kết nối Server! Vui lòng kiểm tra lại mã thi."); 
-            btn.disabled = false; btn.innerText = "VÀO THI NGAY ➔"; 
+            alert("Lỗi kết nối Server!"); btn.disabled = false; 
         }
     }
 
-    function startQuiz() {
-        if(allQuestions.length === 0) return alert("Vui lòng đợi dữ liệu tải...");
-        selectedQuestions = allQuestions.sort(() => 0.5 - Math.random()).slice(0, 30);
-        document.getElementById('display-name').innerText = document.getElementById('studentName').value.toUpperCase();
-        document.getElementById('job-display-header').innerText = document.getElementById('jobType').options[document.getElementById('jobType').selectedIndex].text;
-        
-        document.getElementById('start-screen').style.display = 'none';
-        document.getElementById('caee-header').style.display = 'flex';
-        document.getElementById('ai-container').style.display = 'flex';
-        document.getElementById('timer').style.display = 'block';
-        document.getElementById('quiz-screen').style.display = 'grid';
-        
-        setTimeout(() => {
-            document.getElementById('caee-header').classList.add('header-hidden');
-        }, 10000);
+  function startQuiz() {
+    // Lấy dữ liệu từ form nhập liệu
+    const studentName = document.getElementById('studentName').value.trim().toUpperCase();
+    const jobName = document.getElementById('jobType').options[document.getElementById('jobType').selectedIndex].text.replace("NGHỀ: ", "");
 
-        showQuestion(0);
-        startTimer();
-        aiSpeak("Chào mừng học viên " + document.getElementById('studentName').value + ". Mời bạn bắt đầu nội dung trắc nghiệm.");
-    }
+    // Đưa thông tin vào khung AI với định dạng mới
+    document.getElementById('display-name').innerText = studentName;
+    document.getElementById('display-job').innerText = jobName;
+
+    // Các thiết lập hiển thị màn hình thi
+    selectedQuestions = allQuestions.sort(() => 0.5 - Math.random()).slice(0, 30);
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('ai-container').style.display = 'flex';
+    document.getElementById('timer').style.display = 'block';
+    document.getElementById('quiz-screen').style.display = 'grid';
+    
+    showQuestion(0);
+    startTimer();
+    
+    // AI chào hỏi cá nhân hóa
+    aiSpeak("Chào mừng học viên " + studentName + ". Mời bạn bắt đầu bài thi trắc nghiệm " + jobName);
+}
 
     function showQuestion(idx) {
         currentQuestionIndex = idx;
@@ -280,7 +270,7 @@
         const labels = ['A', 'B', 'C', 'D'];
 
         let html = `<h3>Câu ${idx + 1}: ${q.question}</h3>`;
-        if(q.image) html += `<div class="q-image-box"><img src="${q.image}"></div>`;
+        if(q.image) html += `<div style="text-align:center"><img src="${q.image}" style="max-width:100%; border-radius:8px; margin:10px 0;"></div>`;
 
         q.options.forEach((opt, i) => {
             let cls = "";
@@ -301,15 +291,7 @@
         
         document.getElementById('quiz-content').innerHTML = html;
         renderGrid();
-
-        // AI TỰ ĐỘNG ĐỌC NỘI DUNG NẾU CHƯA CÓ ĐÁP ÁN (Tránh lặp lại khi đã làm xong)
-        if (!stored) {
-            let textToRead = "Câu hỏi " + (idx+1) + ": " + q.question + ". ";
-            q.options.forEach((opt, i) => {
-                textToRead += "Đáp án " + labels[i] + ": " + opt + ". ";
-            });
-            aiSpeak(textToRead);
-        }
+        if (!stored) aiSpeak(q.question);
     }
 
     function selectAns(qIdx, ans) {
@@ -319,22 +301,12 @@
         else studentAnswers.push({qIndex: qIdx, selected: ans});
         
         const q = selectedQuestions[qIdx];
-        const labels = ['A', 'B', 'C', 'D'];
-        const userChoiceIdx = q.options.indexOf(ans);
-        const userChoiceLabel = labels[userChoiceIdx];
-
         if (document.getElementById('modeToggle').checked) {
-            if (userChoiceLabel === q.answer) {
-                aiSpeak("Chính xác. " + q.explanation);
-                showQuestion(qIdx);
-            } else {
-                const items = document.querySelectorAll('.option-item');
-                items.forEach(item => {
-                    if(item.innerText.includes(ans)) item.classList.add('shake-anim');
-                });
-                aiSpeak("Chưa đúng. Đáp án đúng là " + q.answer + ". " + q.explanation);
-                setTimeout(() => { showQuestion(qIdx); }, 2000);
-            }
+            const labels = ['A', 'B', 'C', 'D'];
+            const userChoiceLabel = labels[q.options.indexOf(ans)];
+            if (userChoiceLabel === q.answer) aiSpeak("Chính xác. " + q.explanation);
+            else aiSpeak("Sai rồi. Đáp án đúng là " + q.answer);
+            showQuestion(qIdx);
         } else {
             showQuestion(qIdx);
         }
@@ -361,60 +333,38 @@
     }
 
     async function submitQuiz(auto = false) {
-        if(!auto && !confirm("Bạn có chắc chắn muốn nộp bài thi?")) return;
-        clearInterval(timerInterval); 
-        synth.cancel();
+        if(!auto && !confirm("Bạn có chắc muốn nộp bài?")) return;
+        clearInterval(timerInterval); synth.cancel();
         isSubmitted = true;
         
-        const nameValue = document.getElementById('studentName').value.toUpperCase().trim();
-        const dobValue = document.getElementById('studentDOB').value.trim();
-        const khoaThiValue = document.getElementById('khoaThi').value.trim();
-
         let score = 0;
         selectedQuestions.forEach((q, i) => {
             const ans = studentAnswers.find(a => a.qIndex === i);
-            const labels = ['A','B','C','D'];
-            if(ans && labels[q.options.indexOf(ans.selected)] === q.answer) score++;
+            if(ans && ['A','B','C','D'][q.options.indexOf(ans.selected)] === q.answer) score++;
         });
 
-        const score10 = ((score / 30) * 10).toFixed(1); 
         const status = score >= 25 ? "ĐẠT" : "KHÔNG ĐẠT";
-
-        document.getElementById('res-name').innerText = nameValue;
-        document.getElementById('res-dob').innerText = dobValue;
-        document.getElementById('res-id').innerText = khoaThiValue;
+        document.getElementById('res-name').innerText = document.getElementById('studentName').value;
+        document.getElementById('res-dob').innerText = document.getElementById('studentDOB').value;
+        document.getElementById('res-id').innerText = document.getElementById('khoaThi').value;
         document.getElementById('res-score').innerText = score;
-
         const badge = document.getElementById('res-badge');
-        badge.innerText = score10 + " ĐIỂM"; 
+        badge.innerText = status;
         badge.style.backgroundColor = status === "ĐẠT" ? "#28a745" : "#dc3545";
         document.getElementById('result-screen').style.display = 'flex';
 
-        // AI THÔNG BÁO KẾT QUẢ CUỐI CÙNG
-        aiSpeak("Học viên " + nameValue + " đã hoàn thành bài thi với kết quả " + score10 + " điểm. Trạng thái: " + status);
-
+        // Gửi dữ liệu (POST)
         const formData = new URLSearchParams();
-        formData.append('maThi', document.getElementById('maThi').value.trim().toUpperCase());
-        formData.append('name', nameValue);
-        formData.append('birthDate', dobValue);
-        formData.append('khoaThi', khoaThiValue);
-        const rawNghe = document.getElementById('jobType').options[document.getElementById('jobType').selectedIndex].text;
-        const modeSuffix = document.getElementById('modeToggle').checked ? " (ÔN TẬP)" : " (THI)";
-        formData.append('ngheName', "NGHỀ: " + rawNghe + modeSuffix);
-        formData.append('score', score + "/30 (" + score10 + " điểm)");
+        formData.append('name', document.getElementById('studentName').value);
+        formData.append('score', score + "/30");
         formData.append('status', status);
-        formData.append('viPham', cheatCount);
-        formData.append('mode', document.getElementById('modeToggle').checked ? "ON_TAP" : "THI");
         fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: formData });
 
         let c = 15;
-        const cdInterval = setInterval(() => { 
-            if(c > 0) { c--; document.getElementById('countdown').innerText = c; }
-            else { clearInterval(cdInterval); location.reload(); }
-        }, 1000);
+        setInterval(() => { if(c > 0) { c--; document.getElementById('countdown').innerText = c; } else location.reload(); }, 1000);
     }
 
- // Chỉ kích hoạt chống gian lận khi bài thi đang diễn ra
+   // Chỉ kích hoạt chống gian lận khi bài thi đang diễn ra
 window.onblur = () => { 
     // Điều kiện: Chưa nộp bài VÀ danh sách câu hỏi đã được chọn VÀ màn hình thi đang hiển thị
     if(!isSubmitted && selectedQuestions.length > 0 && document.getElementById('quiz-screen').style.display === 'grid') { 
