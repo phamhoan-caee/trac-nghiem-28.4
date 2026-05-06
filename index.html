@@ -136,9 +136,14 @@
         <div style="flex-grow: 1;">
             <div id="ai-info-display" style="font-size: 14px; line-height: 1.4;">
                 <div style="color: var(--caee-blue); font-weight: 800; font-size: 15px;">TRỢ LÝ ẢO CAEE</div>
-                <div style="color: #333;"><b id="display-name">---</b> | <span id="display-job" style="color: #d32f2f; font-weight: bold;">---</span></div>
-                <div id="ai-status" style="font-size: 12px; color: #666; font-style: italic;">Đang sẵn sàng...</div>
+               <div style="color: #333;">
+                <b>Họ tên học viên:</b> <span id="display-name" style="text-transform: uppercase; color: #003399; font-weight: bold;">---</span>
             </div>
+            <div style="color: #333;">
+                <b>Nghề:</b> <span id="display-job" style="color: #d32f2f; font-weight: bold;">---</span>
+            </div>
+            <div id="ai-status" style="font-size: 12px; color: #666; font-style: italic; margin-top: 2px;">Đang sẵn sàng...</div>
+        </div>
         </div>
     </div>
 
@@ -234,22 +239,28 @@
         }
     }
 
-    function startQuiz() {
-        // Đưa thông tin vào khung AI
-        document.getElementById('display-name').innerText = document.getElementById('studentName').value.toUpperCase();
-        const jobName = document.getElementById('jobType').options[document.getElementById('jobType').selectedIndex].text.replace("NGHỀ: ", "");
-        document.getElementById('display-job').innerText = jobName;
+  function startQuiz() {
+    // Lấy dữ liệu từ form nhập liệu
+    const studentName = document.getElementById('studentName').value.trim().toUpperCase();
+    const jobName = document.getElementById('jobType').options[document.getElementById('jobType').selectedIndex].text.replace("NGHỀ: ", "");
 
-        selectedQuestions = allQuestions.sort(() => 0.5 - Math.random()).slice(0, 30);
-        document.getElementById('start-screen').style.display = 'none';
-        document.getElementById('ai-container').style.display = 'flex';
-        document.getElementById('timer').style.display = 'block';
-        document.getElementById('quiz-screen').style.display = 'grid';
-        
-        showQuestion(0);
-        startTimer();
-        aiSpeak("Chào mừng " + document.getElementById('studentName').value + ". Mời bạn bắt đầu bài thi " + jobName);
-    }
+    // Đưa thông tin vào khung AI với định dạng mới
+    document.getElementById('display-name').innerText = studentName;
+    document.getElementById('display-job').innerText = jobName;
+
+    // Các thiết lập hiển thị màn hình thi
+    selectedQuestions = allQuestions.sort(() => 0.5 - Math.random()).slice(0, 30);
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('ai-container').style.display = 'flex';
+    document.getElementById('timer').style.display = 'block';
+    document.getElementById('quiz-screen').style.display = 'grid';
+    
+    showQuestion(0);
+    startTimer();
+    
+    // AI chào hỏi cá nhân hóa
+    aiSpeak("Chào mừng học viên " + studentName + ". Mời bạn bắt đầu bài thi trắc nghiệm " + jobName);
+}
 
     function showQuestion(idx) {
         currentQuestionIndex = idx;
