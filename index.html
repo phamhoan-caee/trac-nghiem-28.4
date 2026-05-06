@@ -349,27 +349,41 @@
             if(ans && ['A','B','C','D'][q.options.indexOf(ans.selected)] === q.answer) score++;
         });
 
+        // Tính điểm hệ số 10 (làm tròn 1 chữ số thập phân)
+        const finalGrade = (score * 10 / 30).toFixed(1);
         const status = score >= 25 ? "ĐẠT" : "KHÔNG ĐẠT";
+
+        // Đổ dữ liệu ra màn hình
         document.getElementById('res-name').innerText = document.getElementById('studentName').value;
         document.getElementById('res-dob').innerText = document.getElementById('studentDOB').value;
         document.getElementById('res-id').innerText = document.getElementById('khoaThi').value;
         document.getElementById('res-score').innerText = score;
+        
         const badge = document.getElementById('res-badge');
-        badge.innerText = status;
-        badge.style.backgroundColor = status === "ĐẠT" ? "#28a745" : "#dc3545";
+        // Hiển thị điểm số kèm trạng thái Đạt/Không đạt
+        badge.innerText = `${finalGrade} ĐIỂM (${status})`;
+        badge.style.backgroundColor = score >= 25 ? "#28a745" : "#e91e63"; // Xanh nếu đạt, Đỏ hồng nếu không đạt giống ảnh
+        
         document.getElementById('result-screen').style.display = 'flex';
 
-        // Gửi dữ liệu (POST)
+        // Gửi dữ liệu về Google Sheets
         const formData = new URLSearchParams();
         formData.append('name', document.getElementById('studentName').value);
-        formData.append('score', score + "/30");
+        formData.append('score', score + "/30 (" + finalGrade + "đ)");
         formData.append('status', status);
         fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: formData });
 
+        // Tự động reload sau 15 giây
         let c = 15;
-        setInterval(() => { if(c > 0) { c--; document.getElementById('countdown').innerText = c; } else location.reload(); }, 1000);
+        const countInt = setInterval(() => { 
+            c--; 
+            document.getElementById('countdown').innerText = c; 
+            if(c <= 0) {
+                clearInterval(countInt);
+                location.reload(); 
+            }
+        }, 1000);
     }
-
    // Chỉ kích hoạt chống gian lận khi bài thi đang diễn ra
 window.onblur = () => { 
     // Điều kiện: Chưa nộp bài VÀ danh sách câu hỏi đã được chọn VÀ màn hình thi đang hiển thị
