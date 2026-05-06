@@ -328,71 +328,98 @@
         }, 1000);
     }
 
-   async function submitQuiz(auto = false) {
-        if(!auto && !confirm("Bạn có chắc chắn muốn nộp bài thi?")) return;
-        clearInterval(timerInterval); 
-        synth.cancel();
-        isSubmitted = true;
-        
-        const nameValue = document.getElementById('studentName').value.toUpperCase().trim();
-        const dobValue = document.getElementById('studentDOB').value.trim();
-        const khoaThiValue = document.getElementById('khoaThi').value.trim();
+async function submitQuiz(auto = false) {
+    // 1. Kiểm tra nếu đã nộp rồi thì không chạy nữa
+    if (isSubmitted) return;
 
-        let score = 0;
-        selectedQuestions.forEach((q, i) => {
-            const ans = studentAnswers.find(a => a.qIndex === i);
-            const labels = ['A','B','C','D'];
-            if(ans && labels[q.options.indexOf(ans.selected)] === q.answer) score++;
-        });
-
-        const score10 = ((score / 30) * 10).toFixed(1); 
-        const status = score >= 25 ? "ĐẠT" : "KHÔNG ĐẠT";
-
-        document.getElementById('res-name').innerText = nameValue;
-        document.getElementById('res-dob').innerText = dobValue;
-        document.getElementById('res-id').innerText = khoaThiValue;
-        document.getElementById('res-score').innerText = score;
-
-        const badge = document.getElementById('res-badge');
-        badge.innerText = score10 + " ĐIỂM"; 
-        badge.style.backgroundColor = status === "ĐẠT" ? "#28a745" : "#dc3545";
-        document.getElementById('result-screen').style.display = 'flex';
-
-        // AI THÔNG BÁO KẾT QUẢ CUỐI CÙNG
-        aiSpeak("Học viên " + nameValue + " đã hoàn thành bài thi với kết quả " + score10 + " điểm. Trạng thái: " + status);
-
-        const formData = new URLSearchParams();
-        formData.append('maThi', document.getElementById('maThi').value.trim().toUpperCase());
-        formData.append('name', nameValue);
-        formData.append('birthDate', dobValue);
-        formData.append('khoaThi', khoaThiValue);
-        const rawNghe = document.getElementById('jobType').options[document.getElementById('jobType').selectedIndex].text;
-        const modeSuffix = document.getElementById('modeToggle').checked ? " (ÔN TẬP)" : " (THI)";
-        formData.append('ngheName', "NGHỀ: " + rawNghe + modeSuffix);
-        formData.append('score', score + "/30 (" + score10 + " điểm)");
-        formData.append('status', status);
-        formData.append('viPham', cheatCount);
-        formData.append('mode', document.getElementById('modeToggle').checked ? "ON_TAP" : "THI");
-        fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: formData });
-
-        let c = 15;
-        const cdInterval = setInterval(() => { 
-            if(c > 0) { c--; document.getElementById('countdown').innerText = c; }
-            else { clearInterval(cdInterval); location.reload(); }
-        }, 1000);
+    // 2. Nếu không phải tự động nộp (hết giờ/vi phạm) thì mới hỏi xác nhận
+    if (!auto) {
+        const xacNhan = confirm("Bạn có chắc chắn muốn nộp bài thi?");
+        if (!xacNhan) return; // Nếu nhấn Hủy thì thoát hàm, KHÔNG đặt isSubmitted = true ở đây
     }
 
-    window.onblur = () => { 
-        if(!isSubmitted && selectedQuestions.length > 0) { 
-            cheatCount++; 
-            document.getElementById('warning-overlay').style.display = 'flex'; 
-            document.getElementById('cheat-count-msg').innerText = `Lần vi phạm: ${cheatCount} / 3`; 
-            if (cheatCount >= 3) submitQuiz(true); 
-        } 
-    };
-    window.onfocus = () => { 
-        if (cheatCount < 3) setTimeout(() => { document.getElementById('warning-overlay').style.display = 'none'; }, 500); 
-    };
+    // 3. Bắt đầu quá trình nộp bài chính thức
+    isSubmitted = true; // Chỉ đặt true khi đã vượt qua confirm hoặc là nộp tự động
+    
+    clearInterval(timerInterval); 
+    synth.cancel();
+    
+    // Vô hiệu hóa nút nộp bài để tránh học viên nhấn liên tục
+    const sBtn = document.getElementById('submitBtn');
+    if(sBtn) {
+        sBtn.disabled = true;
+        sBtn.innerText = "ĐANG GỬI...";
+    }
+
+    const nameValue = document.getElementById('studentName').value.toUpperCase().trim();
+    const dobValue = document.getElementById('studentDOB').value.trim();
+    const khoaThiValue = document.getElementById('khoaThi').value.trim();
+
+    let score = 0;
+    selectedQuestions.forEach((q, i) => {
+        const ans = studentAnswers.find(a => a.qIndex === i);
+        const labels = ['A','B','C','D'];
+        if(ans && labels[q.options.indexOf(ans.selected)] === q.answer) score++;
+    });
+
+    const score10 = ((score / 30) * 10).toFixed(1); 
+    const status = score >= 25 ? "ĐẠT" : "KHÔNG ĐẠT";
+
+    // Hiển thị kết quả lên màn hình
+    document.getElementById('res-name').innerText = nameValue;
+    document.getElementById('res-dob').innerText = dobValue;
+    document.getElementById('res-id').innerText = khoaThiValue;
+    document.getElementById('res-score').innerText = score;
+
+    const badge = document.getElementById('res-badge');
+    badge.innerText = score10 + " ĐIỂM"; 
+    badge.style.backgroundColor = status === "ĐẠT" ? "#28a745" : "#dc3545";
+    document.getElementById('result-screen').style.display = 'flex';
+
+    // AI THÔNG BÁO KẾT QUẢ
+    aiSpeak("Học viên " + nameValue + " đã hoàn thành bài thi với kết quả " + score10 + " điểm. Trạng thái: " + status);
+
+    // Gửi dữ liệu về Google Sheets
+    const formData = new URLSearchParams();
+    formData.append('maThi', document.getElementById('maThi').value.trim().toUpperCase());
+    formData.append('name', nameValue);
+    formData.append('birthDate', dobValue);
+    formData.append('khoaThi', khoaThiValue);
+    const rawNghe = document.getElementById('jobType').options[document.getElementById('jobType').selectedIndex].text;
+    const modeSuffix = document.getElementById('modeToggle').checked ? " (ÔN TẬP)" : " (THI)";
+    formData.append('ngheName', rawNghe + modeSuffix);
+    formData.append('score', score + "/30 (" + score10 + " điểm)");
+    formData.append('status', status);
+    formData.append('viPham', cheatCount);
+    formData.append('mode', document.getElementById('modeToggle').checked ? "ON_TAP" : "THI");
+
+    try {
+        await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: formData });
+    } catch (e) {
+        console.log("Lỗi gửi dữ liệu: ", e);
+    }
+
+    // Đếm ngược tự động tải lại trang
+    let c = 15;
+    const cdInterval = setInterval(() => { 
+        if(c > 0) { 
+            c--; 
+            document.getElementById('countdown').innerText = c; 
+        } else { 
+            clearInterval(cdInterval); 
+            location.reload(); 
+        }
+    }, 1000);
+}
+   window.onblur = () => { 
+    // Chỉ tính vi phạm nếu chưa nộp bài, đã vào thi và KHÔNG phải đang hiện hộp thoại nộp bài
+    if(!isSubmitted && selectedQuestions.length > 0) { 
+        cheatCount++; 
+        document.getElementById('warning-overlay').style.display = 'flex'; 
+        document.getElementById('cheat-count-msg').innerText = `Lần vi phạm: ${cheatCount} / 3`; 
+        if (cheatCount >= 3) submitQuiz(true); 
+    } 
+};
 </script>
 </body>
 </html>
